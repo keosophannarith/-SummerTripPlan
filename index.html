@@ -3,268 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>គម្រោងដំណើរទស្សនកិច្ចសិក្សាវិស្សមកាល (Summer Field Trip Plan)</title>
-    
+    <title>Field Trip Multi-Tab (Google Sheet Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Hanuman:wght@400;700&family=Moul&family=Roboto:wght@400;500;700&display=swap');
         
-        body {
-            font-family: 'Roboto', 'Hanuman', sans-serif;
-            background-color: #f3f4f6;
-            color: #374151;
-            line-height: 1.6;
-        }
+        body { font-family: 'Roboto', 'Hanuman', sans-serif; background-color: #f3f4f6; color: #374151; line-height: 1.3; margin: 0; }
+        h1, h2, h3, h4 { font-family: 'Moul', serif; line-height: 1.4; }
         
-        h1, h2, h3, h4 {
-            font-family: 'Moul', serif;
+        .sticky-header { 
+            position: sticky; top: 0; z-index: 1000; 
+            background-color: rgba(243, 244, 246, 0.95); 
+            backdrop-filter: blur(4px); padding: 0.4rem 0;
+            border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .print-area {
-            background-color: white;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-radius: 0.5rem;
-            margin: 2rem auto;
-            max-width: 900px;
-            padding: 2rem;
+            background-color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin: 0.5rem auto; max-width: 1000px; padding: 1.2rem;
+            min-height: 29.7cm; 
         }
 
-        /* រចនាប័ទ្មសម្រាប់ Input ដែលអាចកែបាន */
         .editable-input {
-            width: 100%;
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            transition: all 0.2s ease;
-            font-family: inherit;
-            color: inherit;
+            width: 100%; background: transparent; border: 1px solid transparent; border-radius: 0.2rem;
+            padding: 0.1rem 0.3rem; transition: all 0.2s; font-family: inherit; color: inherit;
         }
-        
-        .editable-input:hover, .editable-input:focus {
-            background-color: #f9fafb;
-            border: 1px dashed #9ca3af;
-            outline: none;
-        }
+        .editable-input:hover, .editable-input:focus { background-color: #f8fafc; border: 1px dashed #9333ea; outline: none; }
 
-        /* ការពារកុំឱ្យដាច់ជើង/សក់ អក្សរខ្មែរ (Moul font) */
-        .kh-title {
-            line-height: 1.8 !important;
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-        }
-
-        .editable-number {
-            text-align: center;
-        }
-        .editable-number-right {
-            text-align: right;
-        }
-
-        /* លាក់ព្រួញឡើងចុះរបស់ Input Number */
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
+        .kh-title { line-height: 1.5 !important; }
+        .editable-number { text-align: center; }
+        .editable-number-right { text-align: right; }
 
         @media print {
-            body { background-color: white; }
-            .print-area { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+            body { background-color: white; padding: 0; }
+            .print-area { box-shadow: none; margin: 0; padding: 0.5rem; max-width: 100%; }
             .no-print { display: none !important; }
-            .editable-input { border: none !important; background: transparent !important; padding: 0 !important; resize: none !important; }
-            /* ការពារកុំឱ្យដាច់តារាងពេល Print */
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
+            .sticky-header { position: static; border: none; }
+            .editable-input { border: none !important; }
         }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-        th, td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; vertical-align: top; }
-        th { background-color: #f9fafb; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 0.4rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 0.2rem 0.4rem; text-align: left; vertical-align: middle; }
+        th { background-color: #f9fafb; font-weight: 700; font-size: 0.75rem; color: #6b7280; }
         .total-row { font-weight: 700; background-color: #f3f4f6; }
+        
+        .sync-status { font-size: 10px; font-weight: bold; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-1">
 
     <div id="app">
-        <!-- ផ្ទាំងបញ្ជាខាងលើ (មិនចេញពេល Print) -->
-        <div class="mb-4 no-print max-w-4xl mx-auto flex justify-between items-center bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-            <!-- Tab Switcher -->
-            <div class="flex space-x-2">
-                <button v-for="(trip, index) in trips" :key="index" @click="activeTab = index" :class="['px-4 py-2 rounded-md font-bold transition-colors text-sm', activeTab === index ? 'bg-purple-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
-                    {{ trip.tabName }}
+        <!-- ផ្ទាំងបញ្ជាខាងលើ (Sticky Tabs) -->
+        <div class="sticky-header no-print">
+            <div class="max-w-5xl mx-auto flex justify-between items-center bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
+                
+                <div class="flex items-center gap-3">
+                    <!-- Tab Switcher -->
+                    <div class="flex gap-1 border-r pr-3">
+                        <button v-for="(trip, index) in trips" :key="index" @click="activeTab = index" 
+                            :class="['px-3 py-1 rounded font-bold text-[11px] border transition-all', activeTab === index ? 'bg-purple-600 text-white border-purple-600 shadow-md scale-105' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100']">
+                            {{ trip.tabName }}
+                        </button>
+                    </div>
+
+                    <!-- Google Sheet Sync Controls -->
+                    <div class="flex items-center gap-2">
+                        <button @click="saveToCloud" :disabled="isSyncing" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-[11px] font-bold flex items-center gap-1 disabled:opacity-50">
+                            <span v-if="!isSyncing">☁️ រក្សាទុកទៅ Sheet</span>
+                            <span v-else>⌛ កំពុងរក្សាទុក...</span>
+                        </button>
+                        <button @click="loadFromCloud" class="text-blue-600 hover:underline text-[11px] font-bold">
+                            🔄 ទាញយកចុងក្រោយ
+                        </button>
+                        <span :class="statusColor" class="sync-status uppercase ml-2">{{ syncMessage }}</span>
+                    </div>
+                </div>
+
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow transition-transform active:scale-90">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                 </button>
             </div>
-            
-            <!-- Print Button (រក្សាទុកតែ Icon) -->
-            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-full shadow flex items-center transition-colors" title="បោះពុម្ព (Print)">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-            </button>
         </div>
 
         <div class="print-area">
-            <!-- ផ្នែកក្បាល -->
-            <header class="text-center mb-6 border-b-2 border-purple-600 pb-4">
-                <textarea v-model="trips[activeTab].tripTitle" class="editable-input kh-title text-2xl md:text-3xl text-purple-700 mb-2 font-bold text-center w-full resize-none overflow-hidden" rows="2" style="font-family: 'Moul', serif;"></textarea>
-                <input v-model="trips[activeTab].tripTarget" class="editable-input text-lg text-gray-600 text-center mb-1">
-                <input v-model="trips[activeTab].tripDate" class="editable-input text-md text-gray-800 text-center font-bold">
-                <input v-model="trips[activeTab].tripTime" class="editable-input text-md text-gray-800 text-center">
+            <header class="text-center mb-3 border-b-2 border-purple-600 pb-2">
+                <textarea v-model="trips[activeTab].tripTitle" class="editable-input kh-title text-lg md:text-xl text-purple-700 font-bold text-center w-full resize-none overflow-hidden" rows="1" style="font-family: 'Moul', serif;"></textarea>
+                <input v-model="trips[activeTab].tripTarget" class="editable-input text-sm text-gray-600 text-center font-medium">
+                <input v-model="trips[activeTab].tripDate" class="editable-input text-xs text-gray-800 text-center font-bold">
+                <input v-model="trips[activeTab].tripTime" class="editable-input text-[11px] text-gray-500 text-center">
             </header>
 
-            <!-- ១. ព័ត៌មានអ្នកចូលរួម -->
-            <section class="mb-6">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xl text-purple-700 border-l-4 border-purple-500 pl-3">១. ព័ត៌មានអ្នកចូលរួម</h2>
-                    <button @click="addStudentRow" class="no-print text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200">+ បន្ថែមក្រុម</button>
+            <section class="mb-3">
+                <div class="flex justify-between items-center mb-0.5">
+                    <h2 class="text-xs text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase">១. ព័ត៌មានអ្នកចូលរួម</h2>
+                    <button @click="addStudentRow" class="no-print text-[9px] bg-purple-50 text-purple-600 px-1.5 rounded border">+ ថែម</button>
                 </div>
-                <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                    <p class="mb-2"><strong>សរុបសិស្សទាំងអស់៖ <span class="text-red-600 text-xl">{{ totalStudents }} នាក់</span></strong> (បូករួមគ្រូ/បុគ្គលិក <input type="number" v-model="trips[activeTab].teacherCount" class="editable-input editable-number inline-block w-16 bg-white border border-gray-300"> នាក់ ស្មើនឹង <strong>{{ totalParticipants }} នាក់</strong>)</p>
-                    
-                    <ul class="list-none ml-4 text-gray-700 space-y-2 mt-3">
+                <div class="bg-purple-50/50 p-2 rounded border border-purple-100">
+                    <p class="text-[11px]"><strong>សរុបសិស្ស៖ <span class="text-red-600 text-xs">{{ totalStudents }} នាក់</span></strong> (គ្រូ <input type="number" v-model="trips[activeTab].teacherCount" class="editable-input editable-number inline-block w-8 bg-white border border-gray-200"> នាក់ | សរុបរួម <strong>{{ totalParticipants }} នាក់</strong>)</p>
+                    <ul class="list-none space-y-0.5 mt-1 text-[11px]">
                         <li v-for="(student, index) in trips[activeTab].students" :key="index" class="flex items-center group">
-                            <span class="mr-2 text-purple-600">•</span>
-                            <input v-model="student.name" class="editable-input flex-grow max-w-sm mr-2 bg-white" placeholder="ឈ្មោះក្រុម/ថ្នាក់"> : 
-                            <input type="number" v-model="student.count" class="editable-input editable-number w-20 mx-2 bg-white font-bold" placeholder="ចំនួន"> នាក់
-                            <button @click="removeStudentRow(index)" class="no-print text-red-400 hover:text-red-600 ml-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" title="លុប">🗑️</button>
+                            <span class="mr-2 text-purple-400">•</span>
+                            <input v-model="student.name" class="editable-input flex-grow bg-white h-5"> : 
+                            <input type="number" v-model="student.count" class="editable-input editable-number w-10 mx-1 bg-white font-bold h-5"> នាក់
+                            <button @click="removeStudentRow(index)" class="no-print text-red-300 opacity-0 group-hover:opacity-100 ml-1">🗑️</button>
                         </li>
                     </ul>
                 </div>
             </section>
 
-            <!-- ២. កម្មវិធី និងសកម្មភាព -->
-            <section class="mb-6">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xl text-purple-700 border-l-4 border-purple-500 pl-3">២. កម្មវិធី និងសកម្មភាព</h2>
-                    <button @click="addScheduleRow" class="no-print text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ បន្ថែមម៉ោង</button>
+            <section class="mb-3">
+                <div class="flex justify-between items-center mb-0.5 text-sm">
+                    <h2 class="text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase text-[12px]">២. កម្មវិធី និងសកម្មភាព</h2>
+                    <button @click="addScheduleRow" class="no-print text-[9px] bg-blue-50 text-blue-600 px-1.5 rounded border">+ ម៉ោង</button>
                 </div>
-                
-                <h3 class="font-bold text-gray-800 mb-2 mt-4">កាលវិភាគលម្អិត៖</h3>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm relative">
-                        <thead>
-                            <tr>
-                                <th class="w-1/4">ពេលវេលា</th>
-                                <th class="w-3/4">សកម្មភាព</th>
-                                <th class="w-10 no-print text-center">ផ្សេង</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, index) in trips[activeTab].schedule" :key="index" class="group" :class="index % 2 === 1 ? 'bg-gray-50' : ''">
-                                <td><input v-model="item.time" class="editable-input font-bold" placeholder="00:00 AM - 00:00 AM"></td>
-                                <td><textarea v-model="item.activity" class="editable-input w-full resize-none h-auto overflow-hidden text-sm" rows="2" placeholder="ពណ៌នាសកម្មភាព..."></textarea></td>
-                                <td class="no-print text-center align-middle">
-                                    <button @click="removeScheduleRow(index)" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" title="លុប">🗑️</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <table class="text-[10px]">
+                    <thead>
+                        <tr><th class="w-1/5">ពេលវេលា</th><th>សកម្មភាពលម្អិត</th><th class="w-6 no-print"></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in trips[activeTab].schedule" :key="index" class="group" :class="index % 2 === 1 ? 'bg-gray-50' : ''">
+                            <td><input v-model="item.time" class="editable-input font-bold text-[11px]"></td>
+                            <td><textarea v-model="item.activity" class="editable-input w-full resize-none h-auto overflow-hidden" rows="1"></textarea></td>
+                            <td class="no-print text-center"><button @click="removeScheduleRow(index)" class="text-red-300 opacity-0 group-hover:opacity-100">🗑️</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="mb-3">
+                <div class="flex justify-between items-center mb-0.5 text-sm font-bold uppercase text-[12px]">
+                    <h2 class="text-purple-700 border-l-4 border-purple-500 pl-2">៣. គម្រោងថវិកា (Budget Plan)</h2>
+                    <button @click="addBudgetRow" class="no-print text-[9px] bg-yellow-50 text-yellow-600 px-1.5 rounded border">+ បន្ទាត់</button>
+                </div>
+                <table class="text-[10px]">
+                    <thead>
+                        <tr><th class="w-8 text-center">ល.រ</th><th>បរិយាយការចំណាយ</th><th class="w-16 text-center">បរិមាណ</th><th class="w-20 text-right">តម្លៃរាយ ($)</th><th class="w-20 text-right">សរុប ($)</th><th class="w-6 no-print"></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in trips[activeTab].budget" :key="index" class="group">
+                            <td class="text-center text-gray-400">{{ index + 1 }}</td>
+                            <td><input v-model="item.desc" class="editable-input"></td>
+                            <td class="text-center"><input type="number" v-model="item.qty" class="editable-input editable-number"></td>
+                            <td><input type="number" v-model="item.price" class="editable-input editable-number-right"></td>
+                            <td class="text-right font-bold text-blue-700">{{ (item.qty * item.price).toFixed(2) }}</td>
+                            <td class="no-print text-center"><button @click="removeBudgetRow(index)" class="text-red-300 opacity-0 group-hover:opacity-100">🗑️</button></td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="4" class="text-right uppercase py-1 text-[10px] font-bold">សរុបការចំណាយទាំងអស់:</td>
+                            <td class="text-right text-red-600 py-1 font-bold text-xs border-t-2 border-red-500">${{ totalBudget.toFixed(2) }}</td>
+                            <td class="no-print border-t-2 border-red-500"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mt-1 p-1 bg-yellow-50 border border-yellow-200 rounded flex justify-between items-center text-[10px]">
+                    <div><strong>មធ្យមភាគចំណាយ:</strong> ${{ totalBudget.toFixed(2) }} / {{ totalStudents }} នាក់ = <span class="bg-white px-1 border rounded font-bold text-red-600">${{ costPerStudent }}</span> / ម្នាក់</div>
+                    <input v-model="trips[activeTab].noteText" class="editable-input italic text-gray-500 text-right w-1/3" placeholder="កំណត់សម្គាល់បន្ថែម...">
                 </div>
             </section>
 
-            <!-- ៣. គម្រោងថវិកា -->
-            <section class="mb-6">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xl text-purple-700 border-l-4 border-purple-500 pl-3">៣. គម្រោងថវិកា (Budget Plan)</h2>
-                    <button @click="addBudgetRow" class="no-print text-sm bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200">+ បន្ថែមចំណាយ</button>
+            <section class="grid grid-cols-2 gap-4 mb-4">
+                <div class="border border-gray-200 p-2 rounded">
+                    <div class="flex justify-between items-center mb-1"><h3 class="font-bold text-[10px] uppercase text-gray-400">សកម្មភាពត្រូវត្រៀម៖</h3><button @click="addPrepTask" class="no-print text-[10px]">+</button></div>
+                    <ul class="list-none space-y-0 text-[10px]">
+                        <li v-for="(task, index) in trips[activeTab].prepTasks" :key="index" class="flex items-center group">
+                            <input type="checkbox" class="mr-1.5 w-3 h-3 accent-purple-600"> 
+                            <input v-model="trips[activeTab].prepTasks[index]" class="editable-input">
+                            <button @click="removePrepTask(index)" class="no-print text-red-200 group-hover:text-red-500 opacity-0 group-hover:opacity-100">×</button>
+                        </li>
+                    </ul>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
-                        <thead>
-                            <tr>
-                                <th class="w-1/12 text-center">ល.រ</th>
-                                <th class="w-4/12">បរិយាយការចំណាយ</th>
-                                <th class="w-2/12 text-center">បរិមាណ</th>
-                                <th class="w-2/12 text-right">តម្លៃរាយ ($)</th>
-                                <th class="w-2/12 text-right">សរុប ($)</th>
-                                <th class="w-1/12 text-center no-print">ផ្សេង</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, index) in trips[activeTab].budget" :key="index" class="group">
-                                <td class="text-center text-gray-500">{{ index + 1 }}</td>
-                                <td><input v-model="item.desc" class="editable-input" placeholder="បរិយាយ..."></td>
-                                <td>
-                                    <div class="flex items-center justify-center">
-                                        <input type="number" v-model="item.qty" class="editable-input editable-number w-16">
-                                        <input v-model="item.unit" class="editable-input w-12 text-xs text-gray-500" placeholder="ឯកតា">
-                                    </div>
-                                </td>
-                                <td><input type="number" v-model="item.price" class="editable-input editable-number-right w-full"></td>
-                                <td class="text-right font-semibold text-blue-700 align-middle">
-                                    {{ (item.qty * item.price).toFixed(2) }}
-                                </td>
-                                <td class="no-print text-center align-middle">
-                                    <button @click="removeBudgetRow(index)" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" title="លុប">🗑️</button>
-                                </td>
-                            </tr>
-                            
-                            <!-- សរុប -->
-                            <tr class="total-row text-base">
-                                <td colspan="4" class="text-right uppercase py-3">សរុបការចំណាយទាំងអស់ (Grand Total):</td>
-                                <td class="text-right text-red-600 border-t-4 border-red-500 py-3 font-bold">${{ totalBudget.toFixed(2) }}</td>
-                                <td class="no-print border-t-4 border-red-500"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col md:flex-row justify-between items-center">
-                    <div>
-                        <h4 class="font-bold text-yellow-800 mb-1">ការបែងចែកចំណាយ (Cost per Student):</h4>
-                        <p>ចំណាយសរុប ${{ totalBudget.toFixed(2) }} ចែកនឹងសិស្ស {{ totalStudents }} នាក់ ស្មើនឹង 
-                            <strong class="text-lg text-red-600">~${{ costPerStudent }} / ម្នាក់</strong>
-                        </p>
-                    </div>
-                    <div class="mt-2 md:mt-0 max-w-xs w-full">
-                        <input v-model="trips[activeTab].noteText" class="editable-input text-sm text-gray-600 italic bg-yellow-100 p-2 text-center" placeholder="ចំណាំបន្ថែមទីនេះ...">
-                    </div>
-                </div>
-            </section>
-
-            <!-- ៤. ការរៀបចំផ្សេងៗ -->
-            <section class="mb-4">
-                <h2 class="text-xl text-purple-700 border-l-4 border-purple-500 pl-3 mb-4">៤. ការរៀបចំ និងសម្ភារៈត្រូវយកមក</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-bold">សកម្មភាពត្រូវត្រៀមរៀបចំ៖</h3>
-                            <button @click="addPrepTask" class="no-print text-xs text-gray-500 hover:text-blue-500">+ បន្ថែម</button>
-                        </div>
-                        <ul class="list-none space-y-1 text-sm">
-                            <li v-for="(task, index) in trips[activeTab].prepTasks" :key="index" class="flex items-center group">
-                                <input type="checkbox" class="mr-2"> 
-                                <input v-model="trips[activeTab].prepTasks[index]" class="editable-input flex-grow">
-                                <button @click="removePrepTask(index)" class="no-print text-gray-400 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-bold">សម្ភារៈសិស្សត្រូវយកមក៖</h3>
-                            <button @click="addItem" class="no-print text-xs text-gray-500 hover:text-blue-500">+ បន្ថែម</button>
-                        </div>
-                        <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
-                            <li v-for="(item, index) in trips[activeTab].requiredItems" :key="index" class="flex items-center ml-2 group">
-                                <span class="mr-1 text-[10px]">•</span>
-                                <input v-model="trips[activeTab].requiredItems[index]" class="editable-input flex-grow">
-                                <button @click="removeItem(index)" class="no-print text-gray-400 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                            </li>
-                        </ul>
-                    </div>
+                <div class="border border-gray-200 p-2 rounded">
+                    <div class="flex justify-between items-center mb-1"><h3 class="font-bold text-[10px] uppercase text-gray-400">សម្ភារៈសិស្សយកមក៖</h3><button @click="addItem" class="no-print text-[10px]">+</button></div>
+                    <ul class="list-none space-y-0 text-[10px]">
+                        <li v-for="(item, index) in trips[activeTab].requiredItems" :key="index" class="flex items-center group">
+                            <span class="mr-1.5 text-purple-300">•</span>
+                            <input v-model="trips[activeTab].requiredItems[index]" class="editable-input">
+                            <button @click="removeItem(index)" class="no-print text-red-200 group-hover:text-red-500 opacity-0 group-hover:opacity-100">×</button>
+                        </li>
+                    </ul>
                 </div>
             </section>
             
-            <footer class="mt-12 text-sm flex justify-between text-gray-600 pt-8 border-t border-gray-200">
-                <div class="text-center w-1/3">
-                    <p class="mb-12 font-bold">ប្រធានគម្រោង/អ្នករៀបចំ</p>
+            <footer class="mt-8 text-[10px] grid grid-cols-3 gap-4 text-gray-600 pt-4 border-t border-gray-200">
+                <div class="text-center">
+                    <p class="mb-10 font-bold uppercase">រៀបចំដោយ</p>
                     <p>.......................................</p>
+                    <p class="text-[9px] mt-1 font-bold">ប្រធានគម្រោង/អ្នករៀបចំ</p>
                 </div>
-                <div class="text-center w-1/3">
-                    <p class="mb-12 font-bold">បានឃើញ និងឯកភាព</p>
-                    <p>នាយក/នាយិកាសាលា</p>
+                <div class="text-center">
+                    <p class="mb-10 font-bold uppercase">ត្រួតពិនិត្យដោយ</p>
+                    <p>.......................................</p>
+                    <p class="text-[9px] mt-1 font-bold uppercase">ប្រធានរដ្ឋបាល</p>
+                </div>
+                <div class="text-center">
+                    <p class="mb-10 font-bold uppercase">បានឃើញ និងឯកភាព</p>
+                    <p>.......................................</p>
+                    <p class="text-[9px] mt-1 font-bold uppercase">នាយក/នាយិកាសាលា</p>
                 </div>
             </footer>
         </div>
@@ -273,182 +209,117 @@
     <script>
         const { createApp } = Vue;
 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr4PoMmJlS9Oxt8aKndLZa_doytffhHsNt11qV56uwNRws3RmcKUNnYVxdd7eIZFv3/exec'; 
+
         createApp({
             data() {
                 return {
-                    activeTab: 0,
+                    activeTab: 0, 
+                    isSyncing: false,
+                    syncMessage: 'Unsynced',
+                    statusColor: 'text-gray-400',
                     trips: [
                         {
-                            tabName: "Summer Field Trip",
+                            tabName: "Summer Trip",
                             tripTitle: "គម្រោងដំណើរទស្សនកិច្ចសិក្សាវិស្សមកាល \n(Summer Field Trip Plan)",
                             tripTarget: "គោលដៅ៖ កសិដ្ឋានកម្សាន្ត / រមណីយដ្ឋានធម្មជាតិ",
-                            tripDate: "កាលបរិច្ឆេទ៖ ថ្ងៃព្រហស្បតិ៍ ៩កើត ខែទុតិយាសាឍ ឆ្នាំមមី អដ្ឋស័ក ព.ស.២៥៧០ ត្រូវនឹងថ្ងៃទី២៣ ខែកក្កដា ឆ្នាំ២០២៦",
+                            tripDate: "ថ្ងៃព្រហស្បតិ៍ ៩កើត ខែទុតិយាសាឍ ឆ្នាំមមី អដ្ឋស័ក ព.ស.២៥៧០ ត្រូវនឹងថ្ងៃទី២៣ ខែកក្កដា ឆ្នាំ២០២៦",
                             tripTime: "ពេលវេលា៖ ចាប់ពីម៉ោង ០៨:៣០ ព្រឹក ដល់ម៉ោង ០៣:០០ រសៀល",
-                            
                             teacherCount: 5,
-                            students: [
-                                { name: "ថ្នាក់ទី២ (Grade 2)", count: 17 },
-                                { name: "បឋមសិក្សាកម្រិតខ្ពស់ (Upper Primary)", count: 12 },
-                                { name: "អនុវិទ្យាល័យកម្រិតទាប (Lower Secondary)", count: 6 }
-                            ],
-                            
-                            schedule: [
-                                { time: "08:30 AM - 09:00 AM", activity: "ជួបជុំសិស្សនៅសាលា ពិនិត្យអវត្តមាន និងចេញដំណើរ" },
-                                { time: "09:00 AM - 10:00 AM", activity: "ធ្វើដំណើរទៅកាន់រមណីយដ្ឋាន (ចែកអាហារសម្រន់លើឡាន)" },
-                                { time: "10:00 AM - 11:30 AM", activity: "ទស្សនាកសិដ្ឋានសត្វ (ចៀម ទន្សាយ ស្វា) និងដើរស្ពានយោល" },
-                                { time: "11:30 AM - 12:30 PM", activity: "ទទួលទានអាហារថ្ងៃត្រង់ជុំគ្នា និងសម្រាក" },
-                                { time: "12:30 PM - 01:30 PM", activity: "កម្មវិធីអានសៀវភៅ និងបោះតង់សម្រាកពេលថ្ងៃ (Day Camping)" },
-                                { time: "01:30 PM - 02:30 PM", activity: "សកម្មភាពស្ទូចត្រីកម្សាន្ត ឬលេងល្បែងសិក្សាជាក្រុម" },
-                                { time: "02:30 PM - 03:00 PM", activity: "សម្អាតទីតាំង និងធ្វើដំណើរត្រឡប់មកសាលាវិញ" }
-                            ],
-                            
-                            budget: [
-                                { desc: "ជួលរថយន្តក្រុង (Bus - ៤៥កៅអី)", qty: 1, unit: "គ្រឿង", price: 150.00 },
-                                { desc: "អាហារថ្ងៃត្រង់ (Lunch Box)", qty: 40, unit: "ប្រអប់", price: 3.50 },
-                                { desc: "អាហារសម្រន់ព្រឹក (នំប៉័ង/នំខេក)", qty: 40, unit: "ឈុត", price: 1.00 },
-                                { desc: "ទឹកបរិសុទ្ធ", qty: 5, unit: "កេស", price: 4.00 },
-                                { desc: "សំបុត្រចូលទស្សនា (សិស្ស)", qty: 35, unit: "នាក់", price: 3.00 },
-                                { desc: "សំបុត្រចូលទស្សនា (គ្រូ)", qty: 5, unit: "នាក់", price: 4.00 },
-                                { desc: "ជួលតង់ កន្ទេលអង្គុយ និងសេវាស្ទូចត្រី", qty: 1, unit: "កញ្ចប់", price: 45.00 },
-                                { desc: "ប្រអប់សង្គ្រោះបឋម (First Aid)", qty: 1, unit: "ប្រអប់", price: 10.00 },
-                                { desc: "ចំណាយបម្រុង (Contingency)", qty: 1, unit: "កញ្ចប់", price: 50.00 }
-                            ],
-
-                            noteText: "(សាលាអាចប្រមូលថវិកា 15$ - 20$ ក្នុងម្នាក់ អាស្រ័យលើការឧបត្ថម្ភ)",
-
-                            prepTasks: [
-                                "ផ្ញើលិខិតសុំអនុញ្ញាតពីមាតាបិតាសិស្ស",
-                                "ប្រមូលថវិកា និងបញ្ជាក់ចំនួនអ្នកចូលរួម",
-                                "កក់រថយន្តក្រុង និងកក់ទីតាំង",
-                                "កម្ម៉ង់អាហារថ្ងៃត្រង់ និងទិញចំណីអាហារ",
-                                "ចាត់តាំងគ្រូទទួលខុសត្រូវតាមក្រុមនីមួយៗ"
-                            ],
-
-                            requiredItems: [
-                                "សម្លៀកបំពាក់កីឡា ឬឯកសណ្ឋានសាលា",
-                                "មួកការពារកម្តៅថ្ងៃ",
-                                "ដបទឹកផ្ទាល់ខ្លួន (សាលាមានទឹកបំពេញ)",
-                                "សៀវភៅចំណូលចិត្ត ១ក្បាល (សម្រាប់កម្មវិធីអាន)",
-                                "ថ្នាំពេទ្យផ្ទាល់ខ្លួន (បើមានជំងឺប្រចាំកាយ)"
-                            ]
+                            students: [{ name: "ថ្នាក់ទី២ (Grade 2)", count: 17 }, { name: "Upper Primary", count: 12 }, { name: "Lower Secondary", count: 6 }],
+                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំសិស្ស និងចេញដំណើរ" }, { time: "09:00 - 10:00", activity: "ធ្វើដំណើរ (ចែកអាហារសម្រន់)" }, { time: "10:00 - 12:00", activity: "ទស្សនាកសិដ្ឋាន និងដើរស្ពានយោល" }, { time: "12:00 - 13:00", activity: "អាហារថ្ងៃត្រង់ និងសម្រាក" }, { time: "13:00 - 15:00", activity: "អានសៀវភៅ និងស្ទូចត្រី" }],
+                            budget: [{ desc: "ជួលរថយន្តក្រុង (Bus)", qty: 0, price: 0 }, { desc: "អាហារថ្ងៃត្រង់ (Lunch Box)", qty: 0, price: 0 }, { desc: "អាហារសម្រន់ & ទឹក", qty: 0, price: 0 }],
+                            noteText: "", prepTasks: ["ផ្ញើលិខិតសុំអនុញ្ញាត", "កក់រថយន្ត"], requiredItems: ["ឯកសណ្ឋាន", "មួក", "ដបទឹក"]
                         },
                         {
-                            tabName: "EY Student Trip",
+                            tabName: "EY Student",
                             tripTitle: "គម្រោងដំណើរទស្សនកិច្ចសិក្សាកុមារតូច \n(EY Student Trip)",
                             tripTarget: "គោលដៅ៖ កន្លែងកម្សាន្ត DOZI (ផ្សារទំនើប CHIP MONG)",
-                            tripDate: "កាលបរិច្ឆេទ៖ [សូមបញ្ចូលកាលបរិច្ឆេទទីនេះ]",
-                            tripTime: "ពេលវេលា៖ ចាប់ពីម៉ោង ០៨:៣០ ព្រឹក ដល់ម៉ោង ១១:៣០ ព្រឹក",
-                            
+                            tripDate: "កាលបរិច្ឆេទ៖ ....................................",
+                            tripTime: "ពេលវេលា៖ ០៨:៣០ ព្រឹក - ១១:៣០ ព្រឹក",
                             teacherCount: 4,
-                            students: [
-                                { name: "ថ្នាក់ EY4A", count: 14 },
-                                { name: "ថ្នាក់ EY4B", count: 18 }
-                            ],
-                            
-                            schedule: [
-                                { time: "08:30 AM - 09:00 AM", activity: "ជួបជុំកុមារនៅសាលា ពិនិត្យអវត្តមាន និងរៀបចំចេញដំណើរ" },
-                                { time: "09:00 AM - 09:30 AM", activity: "ធ្វើដំណើរទៅកាន់ផ្សារទំនើប CHIP MONG" },
-                                { time: "09:30 AM - 11:00 AM", activity: "លេងកម្សាន្តយ៉ាងសប្បាយរីករាយនៅសួនកុមារ DOZI" },
-                                { time: "11:00 AM - 11:30 AM", activity: "ញ៉ាំអាហារសម្រន់ និងធ្វើដំណើរត្រឡប់មកសាលាវិញដោយសុវត្ថិភាព" }
-                            ],
-                            
-                            budget: [
-                                { desc: "ជួលរថយន្តក្រុង / Mini Bus", qty: 1, unit: "គ្រឿង", price: 100.00 },
-                                { desc: "សំបុត្រចូលលេង DOZI (សិស្ស)", qty: 32, unit: "នាក់", price: 5.00 },
-                                { desc: "អាហារសម្រន់ និង ទឹកបរិសុទ្ធ", qty: 36, unit: "ឈុត", price: 2.00 },
-                                { desc: "ចំណាយផ្សេងៗ (បម្រុង)", qty: 1, unit: "កញ្ចប់", price: 20.00 }
-                            ],
-
-                            noteText: "(ចំណាយអាចប្រែប្រួលតាមតម្លៃសំបុត្រជាក់ស្តែង)",
-
-                            prepTasks: [
-                                "ផ្ញើលិខិតសុំអនុញ្ញាតពីមាតាបិតា",
-                                "ទាក់ទងកក់សំបុត្រ DOZI ជាមុន",
-                                "រៀបចំថ្នាំសង្គ្រោះបឋម និងសម្ភារៈអនាម័យ"
-                            ],
-
-                            requiredItems: [
-                                "ឯកសណ្ឋានសាលា",
-                                "ស្រោមជើង (ចាំបាច់សម្រាប់ចូលកន្លែងលេង)",
-                                "ដបទឹកផ្ទាល់ខ្លួន",
-                                "សម្លៀកបំពាក់បម្រុង១កំប្លេ (ក្រែងក្មេងប្រឡាក់)"
-                            ]
+                            students: [{ name: "ថ្នាក់ EY4A", count: 14 }, { name: "ថ្នាក់ EY4B", count: 18 }],
+                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }],
+                            budget: [{ desc: "ជួល Mini Bus", qty: 0, price: 0 }, { desc: "សំបុត្រលេង DOZI", qty: 0, price: 0 }],
+                            noteText: "", prepTasks: ["កក់សំបុត្រ DOZI"], requiredItems: ["ស្រោមជើង", "ដបទឹក"]
                         },
                         {
-                            tabName: "EY5-G1 Student Trip",
+                            tabName: "EY5-G1",
                             tripTitle: "គម្រោងដំណើរទស្សនកិច្ចសិក្សាកុមារតូច \n(EY5-G1 Student Trip)",
                             tripTarget: "គោលដៅ៖ កន្លែងកម្សាន្ត DOZI (ផ្សារទំនើប CHIP MONG)",
-                            tripDate: "កាលបរិច្ឆេទ៖ [សូមបញ្ចូលកាលបរិច្ឆេទទីនេះ]",
-                            tripTime: "ពេលវេលា៖ ចាប់ពីម៉ោង ០៨:៣០ ព្រឹក ដល់ម៉ោង ១១:៣០ ព្រឹក",
-                            
+                            tripDate: "កាលបរិច្ឆេទ៖ ....................................",
+                            tripTime: "ពេលវេលា៖ ០៨:៣០ ព្រឹក - ១១:៣០ ព្រឹក",
                             teacherCount: 5,
-                            students: [
-                                { name: "ថ្នាក់ EY5", count: 21 },
-                                { name: "ថ្នាក់ G1", count: 18 }
-                            ],
-                            
-                            schedule: [
-                                { time: "08:30 AM - 09:00 AM", activity: "ជួបជុំកុមារនៅសាលា ពិនិត្យអវត្តមាន និងរៀបចំចេញដំណើរ" },
-                                { time: "09:00 AM - 09:30 AM", activity: "ធ្វើដំណើរទៅកាន់ផ្សារទំនើប CHIP MONG" },
-                                { time: "09:30 AM - 11:00 AM", activity: "លេងកម្សាន្តយ៉ាងសប្បាយរីករាយនៅសួនកុមារ DOZI" },
-                                { time: "11:00 AM - 11:30 AM", activity: "ញ៉ាំអាហារសម្រន់ និងធ្វើដំណើរត្រឡប់មកសាលាវិញដោយសុវត្ថិភាព" }
-                            ],
-                            
-                            budget: [
-                                { desc: "ជួលរថយន្តក្រុង (Bus)", qty: 1, unit: "គ្រឿង", price: 120.00 },
-                                { desc: "សំបុត្រចូលលេង DOZI (សិស្ស)", qty: 39, unit: "នាក់", price: 5.00 },
-                                { desc: "អាហារសម្រន់ និង ទឹកបរិសុទ្ធ", qty: 44, unit: "ឈុត", price: 2.00 },
-                                { desc: "ចំណាយផ្សេងៗ (បម្រុង)", qty: 1, unit: "កញ្ចប់", price: 25.00 }
-                            ],
-
-                            noteText: "(ចំណាយអាចប្រែប្រួលតាមតម្លៃសំបុត្រជាក់ស្តែង)",
-
-                            prepTasks: [
-                                "ផ្ញើលិខិតសុំអនុញ្ញាតពីមាតាបិតា",
-                                "ទាក់ទងកក់សំបុត្រ DOZI ជាមុន",
-                                "រៀបចំថ្នាំសង្គ្រោះបឋម និងសម្ភារៈអនាម័យ"
-                            ],
-
-                            requiredItems: [
-                                "ឯកសណ្ឋានសាលា",
-                                "ស្រោមជើង (ចាំបាច់សម្រាប់ចូលកន្លែងលេង)",
-                                "ដបទឹកផ្ទាល់ខ្លួន",
-                                "សម្លៀកបំពាក់បម្រុង១កំប្លេ (ក្រែងក្មេងប្រឡាក់)"
-                            ]
+                            students: [{ name: "ថ្នាក់ EY5", count: 21 }, { name: "ថ្នាក់ G1", count: 18 }],
+                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }],
+                            budget: [{ desc: "ជួល Bus", qty: 0, price: 0 }, { desc: "សំបុត្រលេង DOZI", qty: 0, price: 0 }],
+                            noteText: "", prepTasks: ["ផ្ញើលិខិត"], requiredItems: ["ស្រោមជើង", "ឯកសណ្ឋាន"]
                         }
                     ]
                 }
             },
             computed: {
-                totalStudents() {
-                    return this.trips[this.activeTab].students.reduce((sum, s) => sum + (Number(s.count) || 0), 0);
-                },
-                totalParticipants() {
-                    return this.totalStudents + (Number(this.trips[this.activeTab].teacherCount) || 0);
-                },
-                totalBudget() {
-                    return this.trips[this.activeTab].budget.reduce((sum, item) => sum + ((Number(item.qty) || 0) * (Number(item.price) || 0)), 0);
-                },
-                costPerStudent() {
-                    if (this.totalStudents === 0) return "0.00";
-                    return (this.totalBudget / this.totalStudents).toFixed(2);
-                }
+                totalStudents() { return this.trips[this.activeTab].students.reduce((s, t) => s + (Number(t.count) || 0), 0); },
+                totalParticipants() { return this.totalStudents + (Number(this.trips[this.activeTab].teacherCount) || 0); },
+                totalBudget() { return this.trips[this.activeTab].budget.reduce((s, i) => s + (i.qty * i.price), 0); },
+                costPerStudent() { return this.totalStudents ? (this.totalBudget / this.totalStudents).toFixed(2) : "0.00"; }
             },
             methods: {
                 addStudentRow() { this.trips[this.activeTab].students.push({ name: "", count: 0 }); },
-                removeStudentRow(index) { this.trips[this.activeTab].students.splice(index, 1); },
-                
+                removeStudentRow(i) { this.trips[this.activeTab].students.splice(i, 1); },
                 addScheduleRow() { this.trips[this.activeTab].schedule.push({ time: "", activity: "" }); },
-                removeScheduleRow(index) { this.trips[this.activeTab].schedule.splice(index, 1); },
-                
-                addBudgetRow() { this.trips[this.activeTab].budget.push({ desc: "", qty: 1, unit: "", price: 0 }); },
-                removeBudgetRow(index) { this.trips[this.activeTab].budget.splice(index, 1); },
-
+                removeScheduleRow(i) { this.trips[this.activeTab].schedule.splice(i, 1); },
+                addBudgetRow() { this.trips[this.activeTab].budget.push({ desc: "", qty: 0, price: 0 }); },
+                removeBudgetRow(i) { this.trips[this.activeTab].budget.splice(i, 1); },
                 addPrepTask() { this.trips[this.activeTab].prepTasks.push(""); },
-                removePrepTask(index) { this.trips[this.activeTab].prepTasks.splice(index, 1); },
-
+                removePrepTask(i) { this.trips[this.activeTab].prepTasks.splice(i, 1); },
                 addItem() { this.trips[this.activeTab].requiredItems.push(""); },
-                removeItem(index) { this.trips[this.activeTab].requiredItems.splice(index, 1); },
+                removeItem(i) { this.trips[this.activeTab].requiredItems.splice(i, 1); },
+
+                // Google Sheet Cloud Sync Logic
+                async saveToCloud() {
+                    if (GOOGLE_SCRIPT_URL === 'ដាក់_URL_APPS_SCRIPT_របស់អ្នកទីនេះ') {
+                        alert("សូមបញ្ចូល Google Apps Script URL នៅក្នុងកូដជាមុនសិន!");
+                        return;
+                    }
+                    this.isSyncing = true;
+                    this.syncMessage = 'Saving...';
+                    this.statusColor = 'text-yellow-500';
+                    try {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({ trips: this.trips })
+                        });
+                        this.syncMessage = 'Saved to Sheet';
+                        this.statusColor = 'text-green-500';
+                    } catch (e) {
+                        this.syncMessage = 'Save Error';
+                        this.statusColor = 'text-red-500';
+                        console.error(e);
+                    } finally { this.isSyncing = false; }
+                },
+                async loadFromCloud() {
+                    if (GOOGLE_SCRIPT_URL === 'ដាក់_URL_APPS_SCRIPT_របស់អ្នកទីនេះ') return;
+                    this.syncMessage = 'Loading...';
+                    try {
+                        const res = await fetch(GOOGLE_SCRIPT_URL);
+                        const data = await res.json();
+                        if (data && data.trips && data.trips.length > 0) {
+                            this.trips = data.trips;
+                            this.syncMessage = 'Auto-Updated';
+                            this.statusColor = 'text-blue-500';
+                        } else {
+                            this.syncMessage = 'Sheet Empty';
+                        }
+                    } catch (e) { 
+                        this.syncMessage = 'Offline'; 
+                        this.statusColor = 'text-gray-400';
+                    }
+                }
+            },
+            mounted() {
+                // Auto-load ពេលបើកកូដភ្លាម
+                setTimeout(() => this.loadFromCloud(), 500); 
             }
         }).mount('#app')
     </script>
