@@ -74,17 +74,16 @@
                         </button>
                     </div>
 
-                    <!-- Google Sheet Sync Controls -->
+                    <!-- Auto-Sync Status UI -->
                     <div class="flex items-center gap-2">
-                        <button @click="saveToCloud" :disabled="isSyncing" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-[11px] font-bold flex items-center gap-1 disabled:opacity-50">
-                            <span v-if="!isSyncing">☁️ រក្សាទុកទៅ Sheet</span>
-                            <span v-else>⌛ កំពុងរក្សាទុក...</span>
+                        <span class="text-[11px] font-bold flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-200 transition-colors duration-300">
+                            <span v-if="isSyncing || saveTimeout" class="text-yellow-600">⌛ កំពុងរក្សាទុក...</span>
+                            <span v-else class="text-green-600">☁️ បានរក្សាទុក (Auto-Save ON)</span>
+                        </span>
+                        <button @click="loadFromCloud(false)" class="text-blue-600 hover:bg-blue-50 hover:underline text-[11px] font-bold px-2 py-1 rounded border border-transparent transition-colors">
+                            🔄 Refresh
                         </button>
-                        <button @click="loadFromCloud" class="text-blue-600 hover:underline text-[11px] font-bold">
-                            🔄 ទាញយកចុងក្រោយ
-                        </button>
-                        <span :class="statusColor" class="sync-status uppercase ml-2">{{ syncMessage }}</span>
+                        <span :class="statusColor" class="sync-status uppercase ml-2 hidden md:inline-block">{{ syncMessage }}</span>
                     </div>
                 </div>
 
@@ -255,6 +254,8 @@
                 return {
                     activeTab: 0, 
                     isSyncing: false,
+                    isLoading: false,
+                    saveTimeout: null,
                     syncMessage: 'Unsynced',
                     statusColor: 'text-gray-400',
                     trips: [
@@ -300,6 +301,27 @@
                     ]
                 }
             },
+            watch: {
+                trips: {
+                    handler() {
+                        // ប្រសិនបើកំពុងទាញយកទិន្នន័យពី Cloud នោះកុំឱ្យវាសន្មតថាជាការកែប្រែថ្មី
+                        if (this.isLoading) return;
+                        
+                        this.syncMessage = 'ត្រៀមរក្សាទុក...';
+                        this.statusColor = 'text-yellow-500';
+                        
+                        // លុបកម្មវិធីរាប់ពេលវេលាចាស់ចោល ប្រសិនបើអ្នកប្រើនៅតែបន្តវាយអក្សរ
+                        if (this.saveTimeout) clearTimeout(this.saveTimeout);
+                        
+                        // ចាប់ផ្តើមរាប់ពេលវេលា ២វិនាទី ក្រោយពេលឈប់វាយអក្សរ ទើប Save
+                        this.saveTimeout = setTimeout(() => {
+                            this.saveToCloud();
+                            this.saveTimeout = null;
+                        }, 2000);
+                    },
+                    deep: true
+                }
+            },
             computed: {
                 totalStudents() { return this.trips[this.activeTab].students.reduce((s, t) => s + (Number(t.count) || 0), 0); },
                 totalParticipants() { return this.totalStudents + (Number(this.trips[this.activeTab].teacherCount) || 0); },
@@ -340,61 +362,92 @@
 
                 // Google Sheet Cloud Sync Logic
                 async saveToCloud() {
-                    if (GOOGLE_SCRIPT_URL === 'ដាក់_URL_APPS_SCRIPT_របស់អ្នកទីនេះ') {
-                        alert("សូមបញ្ចូល Google Apps Script URL នៅក្នុងកូដជាមុនសិន!");
-                        return;
-                    }
+                    if (GOOGLE_SCRIPT_URL === 'ដាក់_URL_APPS_SCRIPT_របស់អ្នកទីនេះ') return;
                     this.isSyncing = true;
-                    this.syncMessage = 'Saving...';
-                    this.statusColor = 'text-yellow-500';
+                    this.syncMessage = 'កំពុងរក្សាទុក...';
+                    this.statusColor = 'text-yellow-600';
                     try {
                         await fetch(GOOGLE_SCRIPT_URL, {
                             method: 'POST',
                             body: JSON.stringify({ trips: this.trips })
                         });
-                        this.syncMessage = 'Saved to Sheet';
-                        this.statusColor = 'text-green-500';
+                        this.syncMessage = 'រក្សាទុកជោគជ័យ ✓';
+                        this.statusColor = 'text-green-600';
+                        // លុបសារបន្ទាប់ពីជោគជ័យ
+                        setTimeout(() => { 
+                            if (!this.saveTimeout) { // Reset លុះត្រាតែគ្មានការកែប្រែថ្មី
+                                this.syncMessage = 'រួចរាល់'; 
+                                this.statusColor = 'text-gray-500'; 
+                            }
+                        }, 3000);
                     } catch (e) {
                         this.syncMessage = 'Save Error';
-                        this.statusColor = 'text-red-500';
+                        this.statusColor = 'text-red-600';
                         console.error(e);
-                    } finally { this.isSyncing = false; }
+                    } finally { 
+                        this.isSyncing = false; 
+                    }
                 },
-                async loadFromCloud() {
+                async loadFromCloud(isSilent = false) {
                     if (GOOGLE_SCRIPT_URL === 'ដាក់_URL_APPS_SCRIPT_របស់អ្នកទីនេះ') return;
-                    this.syncMessage = 'Loading...';
+                    if (!isSilent) {
+                        this.syncMessage = 'កំពុងទាញយក...';
+                        this.statusColor = 'text-blue-500';
+                    }
                     try {
                         const res = await fetch(GOOGLE_SCRIPT_URL);
                         const data = await res.json();
                         if (data && data.trips && data.trips.length > 0) {
-                            // ដោះស្រាយបញ្ហាបាត់ផ្ទាំងទី៣៖ បើទិន្នន័យចាស់ក្នុង Sheet មានតែ២ផ្ទាំង យើងថែមផ្ទាំងថ្មីចូលដោយស្វ័យប្រវត្តិ
                             if (data.trips.length < this.trips.length) {
                                 for (let i = data.trips.length; i < this.trips.length; i++) {
                                     data.trips.push(this.trips[i]);
                                 }
                             }
-                            // ត្រូវប្រាកដថាផ្ទាំងនីមួយៗមាន customSections ជានិច្ច
                             data.trips.forEach(trip => {
                                 if (!trip.customSections) trip.customSections = [];
                             });
                             
-                            this.trips = data.trips;
-                            this.syncMessage = 'ទិន្នន័យថ្មី ✓';
-                            this.statusColor = 'text-blue-500';
-                        } else {
-                            this.syncMessage = 'Sheet Empty';
-                            this.statusColor = 'text-gray-500';
+                            // ប្រៀបធៀបទិន្នន័យដើម្បីកុំឱ្យវា update ជាន់គ្នាប្រសិនបើគ្មានការកែប្រែ
+                            if (JSON.stringify(this.trips) !== JSON.stringify(data.trips)) {
+                                this.isLoading = true; // ប្រាប់ watcher ថាកុំឱ្យ Save
+                                this.trips = data.trips;
+                                
+                                if (!isSilent) {
+                                    this.syncMessage = 'ទិន្នន័យថ្មី ✓';
+                                    this.statusColor = 'text-blue-500';
+                                }
+                                
+                                // ដោះសោរ Watcher វិញបន្ទាប់ពីទិន្នន័យចូលរលូន
+                                setTimeout(() => { this.isLoading = false; }, 100);
+                            } else if (!isSilent) {
+                                this.syncMessage = 'គ្មានទិន្នន័យថ្មី';
+                                this.statusColor = 'text-gray-500';
+                            }
                         }
                     } catch (e) { 
-                        this.syncMessage = 'Offline'; 
-                        this.statusColor = 'text-gray-400';
-                        console.error(e);
+                        if (!isSilent) {
+                            this.syncMessage = 'Offline'; 
+                            this.statusColor = 'text-gray-400';
+                        }
                     }
                 }
             },
             mounted() {
                 // Auto-load ពេលបើកកូដភ្លាម
-                setTimeout(() => this.loadFromCloud(), 500); 
+                this.isLoading = true;
+                setTimeout(() => {
+                    this.loadFromCloud(false).finally(() => {
+                        this.isLoading = false;
+                        
+                        // Polling: ទាញយកទិន្នន័យថ្មីរៀងរាល់ ១០ វិនាទីម្តង
+                        setInterval(() => {
+                            // កុំទាញយកប្រសិនបើអ្នកប្រើកំពុងវាយអក្សរ ឬកំពុង Save ដើម្បីកុំឱ្យបាត់អ្វីដែលកំពុងវាយ
+                            if (!this.saveTimeout && !this.isSyncing) {
+                                this.loadFromCloud(true); // true = silent update (មិនលោតអក្សររំខាន)
+                            }
+                        }, 10000);
+                    });
+                }, 500); 
             }
         }).mount('#app')
     </script>
