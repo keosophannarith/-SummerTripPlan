@@ -143,44 +143,54 @@
                 </header>
 
                 <section class="mb-3">
-                    <div class="flex justify-between items-center mb-0.5">
-                        <h2 class="text-xs text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase">១. ព័ត៌មានអ្នកចូលរួម</h2>
-                        <button @click="addStudentRow" class="no-print text-[9px] bg-purple-50 text-purple-600 px-1.5 rounded border">+ ថែម</button>
-                    </div>
-                    <div class="bg-purple-50/50 p-2 rounded border border-purple-100">
-                        <p class="text-[11px]"><strong>សរុបសិស្ស៖ <span class="text-red-600 text-xs">{{ totalStudents }} នាក់</span></strong> (គ្រូ <input type="number" v-model="trips[activeTab].teacherCount" class="editable-input editable-number inline-block w-8 bg-white border border-gray-200"> នាក់ | សរុបរួម <strong>{{ totalParticipants }} នាក់</strong>)</p>
-                        <ul class="list-none space-y-0.5 mt-1 text-[11px]">
-                            <li v-for="(student, index) in trips[activeTab].students" :key="index" class="flex items-center group">
-                                <span class="mr-2 text-purple-400">•</span>
-                                <input v-model="student.name" class="editable-input flex-grow bg-white h-5"> : 
-                                <input type="number" v-model="student.count" class="editable-input editable-number w-10 mx-1 bg-white font-bold h-5"> នាក់
-                                <button @click="removeStudentRow(index)" class="no-print text-red-300 opacity-0 group-hover:opacity-100 ml-1">🗑️</button>
-                            </li>
-                        </ul>
-                    </div>
-                </section>
+                <div class="flex justify-between items-center mb-0.5">
+                    <h2 class="text-xs text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase">១. ព័ត៌មានអ្នកចូលរួម</h2>
+                    <button @click="addStudentRow" class="no-print text-[9px] bg-purple-50 text-purple-600 px-1.5 rounded border">+ ថែម</button>
+                </div>
+                <div class="bg-purple-50/50 p-2 rounded border border-purple-100">
+                    <p class="text-[11px]"><strong>សរុបសិស្ស៖ <span class="text-red-600 text-xs">{{ totalStudents }} នាក់</span></strong> (គ្រូ <input type="number" v-model="trips[activeTab].teacherCount" class="editable-input editable-number inline-block w-8 bg-white border border-gray-200"> នាក់ | សរុបរួម <strong>{{ totalParticipants }} នាក់</strong>)</p>
+                    <ul class="list-none space-y-0.5 mt-1 text-[11px]">
+                        <li v-for="(student, index) in trips[activeTab].students" :key="index" class="flex items-center group">
+                            <span class="mr-2 text-purple-400">•</span>
+                            <input v-model="student.name" class="editable-input flex-grow bg-white h-5"> : 
+                            <input type="number" v-model="student.count" class="editable-input editable-number w-10 mx-1 bg-white font-bold h-5"> នាក់
+                            <button @click="removeStudentRow(index)" class="no-print text-red-300 opacity-0 group-hover:opacity-100 ml-1">🗑️</button>
+                        </li>
+                    </ul>
+                </div>
+            </section>
 
-                <section class="mb-3">
-                    <div class="flex justify-between items-center mb-0.5 text-sm">
-                        <h2 class="text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase text-[12px]">២. កម្មវិធី និងសកម្មភាព</h2>
-                        <button @click="addScheduleRow" class="no-print text-[9px] bg-blue-50 text-blue-600 px-1.5 rounded border">+ ម៉ោង</button>
+            <section class="mb-3">
+                <div class="flex justify-between items-center mb-1 text-sm">
+                    <h2 class="text-purple-700 border-l-4 border-purple-500 pl-2 font-bold uppercase text-[12px]">២. កម្មវិធី និងសកម្មភាព</h2>
+                    <button @click="addDay" class="no-print text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border shadow-sm">+ ថែមថ្ងៃ</button>
+                </div>
+                
+                <div v-for="(day, dayIndex) in trips[activeTab].schedule" :key="dayIndex" class="mb-3">
+                    <div class="flex justify-between items-center mb-1 bg-blue-50/30 p-1 rounded border border-blue-100">
+                        <input v-model="day.dayTitle" class="editable-input font-bold text-[11px] text-blue-700 w-2/3" placeholder="ឧទាហរណ៍៖ ថ្ងៃទី១...">
+                        <div class="flex gap-1">
+                            <button @click="addScheduleRow(dayIndex)" class="no-print text-[9px] bg-white text-blue-600 px-1.5 rounded border shadow-sm">+ ម៉ោង</button>
+                            <button v-if="trips[activeTab].schedule.length > 1" @click="removeDay(dayIndex)" class="no-print text-[9px] bg-red-50 text-red-500 px-1.5 rounded border">លុបថ្ងៃ</button>
+                        </div>
                     </div>
-                    <table class="text-[10px]">
+                    <table class="text-[10px] w-full border-collapse">
                         <thead>
-                            <tr><th class="w-1/5">ពេលវេលា</th><th>សកម្មភាពលម្អិត</th><th class="w-6 no-print"></th></tr>
+                            <tr><th class="w-1/5 border border-e5e7eb p-1 bg-gray-50">ពេលវេលា</th><th class="border border-e5e7eb p-1 bg-gray-50">សកម្មភាពលម្អិត</th><th class="w-6 no-print border border-e5e7eb p-1 bg-gray-50"></th></tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(item, index) in trips[activeTab].schedule" :key="index" class="group" :class="index % 2 === 1 ? 'bg-gray-50' : ''">
-                                <td><textarea v-model="item.time" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="editable-input font-bold text-[11px] h-auto overflow-hidden" rows="1"></textarea></td>
-                                <td><textarea v-model="item.activity" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="editable-input w-full h-auto overflow-hidden" rows="1"></textarea></td>
-                                <td class="no-print text-center align-top"><button @click="removeScheduleRow(index)" class="text-red-300 opacity-0 group-hover:opacity-100 mt-1">🗑️</button></td>
+                            <tr v-for="(item, itemIndex) in day.items" :key="itemIndex" class="group" :class="itemIndex % 2 === 1 ? 'bg-gray-50/50' : ''">
+                                <td class="border border-e5e7eb p-1"><textarea v-model="item.time" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="editable-input font-bold text-[11px] h-auto overflow-hidden" rows="1"></textarea></td>
+                                <td class="border border-e5e7eb p-1"><textarea v-model="item.activity" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" class="editable-input w-full h-auto overflow-hidden" rows="1"></textarea></td>
+                                <td class="no-print text-center align-top border border-e5e7eb p-1"><button @click="removeScheduleRow(dayIndex, itemIndex)" class="text-red-300 opacity-0 group-hover:opacity-100 mt-1">🗑️</button></td>
                             </tr>
                         </tbody>
                     </table>
-                </section>
+                </div>
+            </section>
 
-                <section class="mb-3">
-                    <div class="flex justify-between items-center mb-0.5 text-sm font-bold uppercase text-[12px]">
+            <section class="mb-3">
+                <div class="flex justify-between items-center mb-0.5 text-sm font-bold uppercase text-[12px]">
                         <h2 class="text-purple-700 border-l-4 border-purple-500 pl-2">៣. គម្រោងថវិកា (Budget Plan)</h2>
                         <button @click="addBudgetRow" class="no-print text-[9px] bg-yellow-50 text-yellow-600 px-1.5 rounded border">+ បន្ទាត់</button>
                     </div>
@@ -300,7 +310,18 @@
                             tripTime: "ពេលវេលា៖ ចាប់ពីម៉ោង ០៨:៣០ ព្រឹក ដល់ម៉ោង ០៣:០០ រសៀល",
                             teacherCount: 5,
                             students: [{ name: "ថ្នាក់ទី២ (Grade 2)", count: 17 }, { name: "Upper Primary", count: 12 }, { name: "Lower Secondary", count: 6 }],
-                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំសិស្ស និងចេញដំណើរ" }, { time: "09:00 - 10:00", activity: "ធ្វើដំណើរ (ចែកអាហារសម្រន់)" }, { time: "10:00 - 12:00", activity: "ទស្សនាកសិដ្ឋាន និងដើរស្ពានយោល" }, { time: "12:00 - 13:00", activity: "អាហារថ្ងៃត្រង់ និងសម្រាក" }, { time: "13:00 - 15:00", activity: "អានសៀវភៅ និងស្ទូចត្រី" }],
+                            schedule: [
+                                {
+                                    dayTitle: "ថ្ងៃទី១",
+                                    items: [
+                                        { time: "08:30 - 09:00", activity: "ជួបជុំសិស្ស និងចេញដំណើរ" }, 
+                                        { time: "09:00 - 10:00", activity: "ធ្វើដំណើរ (ចែកអាហារសម្រន់)" }, 
+                                        { time: "10:00 - 12:00", activity: "ទស្សនាកសិដ្ឋាន និងដើរស្ពានយោល" }, 
+                                        { time: "12:00 - 13:00", activity: "អាហារថ្ងៃត្រង់ និងសម្រាក" }, 
+                                        { time: "13:00 - 15:00", activity: "អានសៀវភៅ និងស្ទូចត្រី" }
+                                    ]
+                                }
+                            ],
                             budget: [{ desc: "ជួលរថយន្តក្រុង (Bus)", qty: 0, price: 0 }, { desc: "អាហារថ្ងៃត្រង់ (Lunch Box)", qty: 0, price: 0 }, { desc: "អាហារសម្រន់ & ទឹក", qty: 0, price: 0 }],
                             noteText: "", prepTasks: ["ផ្ញើលិខិតសុំអនុញ្ញាត", "កក់រថយន្ត"], requiredItems: ["ឯកសណ្ឋានសាលា", "មួកការពារកម្តៅ", "ដបទឹកផ្ទាល់ខ្លួន"],
                             customSections: []
@@ -313,7 +334,16 @@
                             tripTime: "ពេលវេលា៖ ០៨:៣០ ព្រឹក - ១១:៣០ ព្រឹក",
                             teacherCount: 4,
                             students: [{ name: "ថ្នាក់ EY4A", count: 14 }, { name: "ថ្នាក់ EY4B", count: 18 }],
-                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }],
+                            schedule: [
+                                {
+                                    dayTitle: "ថ្ងៃទី១",
+                                    items: [
+                                        { time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, 
+                                        { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, 
+                                        { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }
+                                    ]
+                                }
+                            ],
                             budget: [{ desc: "ជួល Mini Bus", qty: 0, price: 0 }, { desc: "សំបុត្រលេង DOZI", qty: 0, price: 0 }, { desc: "អាហារសម្រន់ & ទឹក", qty: 0, price: 0 }],
                             noteText: "", prepTasks: ["កក់សំបុត្រ DOZI", "រៀបចំកាតឈ្មោះ"], requiredItems: ["ស្រោមជើង (ចាំបាច់)", "ដបទឹកផ្ទាល់ខ្លួន"],
                             customSections: []
@@ -326,7 +356,16 @@
                             tripTime: "ពេលវេលា៖ ០៨:៣០ ព្រឹក - ១១:៣០ ព្រឹក",
                             teacherCount: 5,
                             students: [{ name: "ថ្នាក់ EY5", count: 21 }, { name: "ថ្នាក់ G1", count: 18 }],
-                            schedule: [{ time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }],
+                            schedule: [
+                                {
+                                    dayTitle: "ថ្ងៃទី១",
+                                    items: [
+                                        { time: "08:30 - 09:00", activity: "ជួបជុំ និងចេញដំណើរ" }, 
+                                        { time: "09:00 - 11:00", activity: "លេងនៅ DOZI" }, 
+                                        { time: "11:00 - 11:30", activity: "ញ៉ាំនំ និងត្រឡប់មកវិញ" }
+                                    ]
+                                }
+                            ],
                             budget: [{ desc: "ជួលរថយន្តក្រុង (Bus)", qty: 0, price: 0 }, { desc: "សំបុត្រលេង DOZI", qty: 0, price: 0 }, { desc: "អាហារសម្រន់ & ទឹក", qty: 0, price: 0 }],
                             noteText: "", prepTasks: ["ផ្ញើលិខិតសុំអនុញ្ញាត", "កក់សំបុត្រ DOZI"], requiredItems: ["ស្រោមជើង (ចាំបាច់)", "ឯកសណ្ឋានសាលា"],
                             customSections: []
@@ -364,8 +403,25 @@
             methods: {
                 addStudentRow() { this.trips[this.activeTab].students.push({ name: "", count: 0 }); },
                 removeStudentRow(i) { this.trips[this.activeTab].students.splice(i, 1); },
-                addScheduleRow() { this.trips[this.activeTab].schedule.push({ time: "", activity: "" }); },
-                removeScheduleRow(i) { this.trips[this.activeTab].schedule.splice(i, 1); },
+                
+                // មុខងារថ្មីសម្រាប់ថ្ងៃ (Days) និងម៉ោង (Hours)
+                addDay() {
+                    const nextDay = this.trips[this.activeTab].schedule.length + 1;
+                    this.trips[this.activeTab].schedule.push({
+                        dayTitle: "ថ្ងៃទី" + nextDay,
+                        items: [{ time: "", activity: "" }]
+                    });
+                },
+                removeDay(dayIndex) {
+                    this.trips[this.activeTab].schedule.splice(dayIndex, 1);
+                },
+                addScheduleRow(dayIndex) { 
+                    this.trips[this.activeTab].schedule[dayIndex].items.push({ time: "", activity: "" }); 
+                },
+                removeScheduleRow(dayIndex, itemIndex) { 
+                    this.trips[this.activeTab].schedule[dayIndex].items.splice(itemIndex, 1); 
+                },
+
                 addBudgetRow() { this.trips[this.activeTab].budget.push({ desc: "", qty: 0, price: 0 }); },
                 removeBudgetRow(i) { this.trips[this.activeTab].budget.splice(i, 1); },
                 addPrepTask() { this.trips[this.activeTab].prepTasks.push(""); },
@@ -438,6 +494,14 @@
                             }
                             data.trips.forEach(trip => {
                                 if (!trip.customSections) trip.customSections = [];
+                                
+                                // បំប្លែងទិន្នន័យម៉ោងចាស់ ទៅជាទម្រង់ថ្ងៃថ្មីដោយស្វ័យប្រវត្តិ (Auto-Migrate format)
+                                if (trip.schedule && trip.schedule.length > 0 && !trip.schedule[0].hasOwnProperty('dayTitle')) {
+                                    trip.schedule = [{
+                                        dayTitle: "ថ្ងៃទី១",
+                                        items: [...trip.schedule]
+                                    }];
+                                }
                             });
                             
                             // ប្រៀបធៀបទិន្នន័យដើម្បីកុំឱ្យវា update ជាន់គ្នាប្រសិនបើគ្មានការកែប្រែ
